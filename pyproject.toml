@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdf_pipeline"
+version = "0.1.0"
+description = "A pipeline for converting PDFs to markdown, extracting TOCs, and building FAISS vector stores."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    # Step 1 — PDF to Markdown conversion
+    "marker-pdf",
+    "pypdfium2",
+    "Pillow",
+    "google-generativeai",
+    "google-genai",
+    "pdf2image",
+    "python-dotenv",
+    # Step 3 — Chunk & Embed
+    "langchain-community",
+    "langchain-core",
+    "langchain-openai",
+    "langchain-text-splitters",
+    "faiss-cpu",
+    # CLI
+    "click",
+]
+
+[project.scripts]
+pdf-pipeline = "pdf_pipeline.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

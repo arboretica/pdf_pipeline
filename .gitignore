@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Test / cache
+.pytest_cache/
+.mypy_cache/
+
+# Pipeline outputs
+faiss_stores/
+markdown_output/
+*.faiss
+
+# PDF files (keep repo lightweight)
+*.pdf
+
+# Original scripts at root (archived copies live in original/)
+chunk_embed_hlr*
+extract_toc_hlr*
+pdf_to_markdown*
