@@ -1,4 +1,25 @@
-# pdf_pipeline
+<h1 align="center">pdf_pipeline</h1>
+<p align="center">
+  <b>Turn PDF reports into searchable FAISS vector stores — in three commands.</b>
+</p>
+
+<p align="center">
+  <a href="https://github.com/arboretica/pdf_pipeline/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/arboretica/pdf_pipeline?style=flat&label=Stars"></a>
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-informational">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-blue"></a>
+  <a href="https://github.com/arboretica/pdf_pipeline/issues"><img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen"></a>
+  <a href="https://github.com/arboretica/pdf_pipeline/issues?q=is%3Aopen+is%3Aissue+label%3A%22good%20first%20issue%22"><img alt="Good first issues" src="https://img.shields.io/github/issues-search?query=repo%3Aarboretica%2Fpdf_pipeline+label%3A%22good+first+issue%22&label=good%20first%20issues"></a>
+</p>
+
+<p align="middle">
+  <img src="developed-by-Arboretica_transparent.png" width="478" height="237" alt="Developed by Arboretica">
+</p>
+
+> ⭐️ **If this project helps you, please give it a star!** Stars help others discover it.
+
+---
+
+## What is pdf_pipeline?
 
 A three-step Python pipeline that converts PDF reports into searchable vector stores.
 
@@ -6,13 +27,62 @@ A three-step Python pipeline that converts PDF reports into searchable vector st
 2. **Extract TOC** — detects or builds a structured table of contents from each markdown report.
 3. **Chunk & Embed** — splits markdown into semantically meaningful chunks guided by the TOC, embeds them with OpenAI, and saves per-report [FAISS](https://github.com/facebookresearch/faiss) vector stores.
 
+> **TL;DR**: PDFs in → 3 commands → searchable per-report FAISS vector stores out.
+
+---
+
+## Features
+
+- **Hybrid conversion** — marker-pdf for structure, Gemini vision transcription for figure-heavy pages
+- **TOC-aware chunking** — reuses the document's own table of contents when present (≥ 3 entries), falls back to heading hierarchy
+- **Section breadcrumbs** — every chunk carries its section title, parent sections, and breadcrumb for retrieval context
+- **Tables kept intact** — tables are separated into their own chunks instead of being shredded
+- **One FAISS store per report** — query reports independently
+- **Keyless previews** — `chunk-embed --dry` shows exactly what would be embedded, no API key required
+- **Bundled smoke test** — `pdf-pipeline smoke-test` runs the pipeline on sample data without any keys
+- **Sensible key handling** — CLI flags → environment variables → `.env` file, with nothing logged
+
+---
+
+## How it Works
+
+```mermaid
+flowchart LR
+    PDF["PDF reports"] --> MD["Step 1 — convert<br/>marker-pdf + Gemini figure enhancement"]
+    MD --> TOC["Step 2 — extract-toc<br/>existing TOC or heading hierarchy"]
+    TOC --> TJSON["toc.json"]
+    MD --> CHUNK["Step 3 — chunk-embed<br/>TOC-guided sections, tables split out"]
+    TJSON --> CHUNK
+    CHUNK --> EMB["OpenAI embeddings"]
+    EMB --> FAISS[("FAISS vector store<br/>one per report")]
+```
+
+---
+
+## Requirements
+
+- **Python 3.10+**
+- API keys for **Google Gemini** (Step 1) and **OpenAI** (Step 3)
+- `poppler-utils` if you use the optional `pdf2image` dependency
+  (`brew install poppler` on macOS, `apt install poppler-utils` on Debian/Ubuntu)
+
+## Installation
+
+```bash
+git clone https://github.com/arboretica/pdf_pipeline.git
+cd pdf_pipeline
+pip install -e .
+```
+
+All Python dependencies are declared (with pinned minimum versions) in `pyproject.toml` and installed automatically. `requirements.txt` is a one-line convenience wrapper (`-e .[dev]`) that also installs dev tools such as `pytest`.
+
 ---
 
 ## Quick Start
 
 ```bash
 # 1. Clone & install
-git clone https://github.com/<your-org>/pdf_pipeline.git
+git clone https://github.com/arboretica/pdf_pipeline.git
 cd pdf_pipeline
 pip install -e .
 
@@ -27,28 +97,26 @@ pdf-pipeline extract-toc --markdown-dir ./md_output --output-json ./toc.json
 pdf-pipeline chunk-embed --markdown-dir ./md_output --toc-json ./toc.json --output-dir ./faiss_stores --openai-api-key <KEY>
 ```
 
----
+## Sample Data & Smoke Test
 
-## Requirements
-
-- **Python 3.10+**
-- API keys for **Google Gemini** (Step 1) and **OpenAI** (Step 3)
-- `poppler-utils` if you use the optional `pdf2image` dependency  
-  (`brew install poppler` on macOS, `apt install poppler-utils` on Debian/Ubuntu)
-
-## Installation
+No PDFs handy? The package bundles a tiny synthetic sample (a 1-page PDF and a marker-style markdown fixture) and a smoke-test command:
 
 ```bash
-pip install -e .
+pdf-pipeline smoke-test                 # Steps 2 + 3 (keyless, seconds)
+pdf-pipeline smoke-test --with-convert   # also runs marker-pdf on the sample PDF
 ```
 
-All Python dependencies are declared in `pyproject.toml` and installed automatically.
+`--with-convert` requires the `marker` CLI and downloads OCR models on first use. Outputs land under `smoke_test_output/`.
 
 ---
 
 ## Usage
 
-Every command is a subcommand of `pdf-pipeline`. Run `pdf-pipeline --help` for the full list.
+Every command is a subcommand of `pdf-pipeline`. Run `pdf-pipeline --help` for the full list. Increase verbosity with `-v` (INFO) or `-vv` (DEBUG) **before** the subcommand:
+
+```bash
+pdf-pipeline -vv chunk-embed --markdown-dir ./md_output --toc-json ./toc.json --output-dir ./faiss_stores --dry
+```
 
 ### Step 1 — Convert PDFs to Markdown
 
@@ -64,7 +132,7 @@ pdf-pipeline convert \
 | `--pdf-dir` | Directory containing the source PDF files **(required)** |
 | `--output-dir` | Where marker-pdf writes its markdown output **(required)** |
 | `--google-api-key` | Gemini API key (falls back to `GOOGLE_API_KEY` env var) |
-| `--gemini-model` | Gemini model name (default: `gemini-2.0-flash`) |
+| `--gemini-model` | Gemini model name (default: `gemini-2.0-flash`, from `config.py`) |
 | `--marker-only` | Only run marker-pdf, skip Gemini enhancement |
 | `--enhance-only` | Only run Gemini enhancement (marker output must already exist) |
 
@@ -108,12 +176,12 @@ pdf-pipeline chunk-embed \
 | `--markdown-dir` | Directory containing markdown report sub-directories **(required)** |
 | `--toc-json` | TOC JSON produced by Step 2 **(required)** |
 | `--output-dir` | Where FAISS stores are saved (one sub-directory per report) **(required)** |
-| `--openai-api-key` | OpenAI API key (falls back to `OPENAI_API_KEY` env var) |
-| `--embedding-model` | OpenAI embedding model (default: `text-embedding-3-small`) |
-| `--max-chunk-size` | Max chunk size in characters (default: `1500`) |
-| `--chunk-overlap` | Overlap between chunks in characters (default: `200`) |
+| `--openai-api-key` | OpenAI API key (falls back to `OPENAI_API_KEY` env var; **not required for `--dry`**) |
+| `--embedding-model` | OpenAI embedding model (default: `text-embedding-3-small`, from `config.py`) |
+| `--max-chunk-size` | Max chunk size in characters (default: `1500`, from `config.py`) |
+| `--chunk-overlap` | Overlap between chunks in characters (default: `200`, from `config.py`) |
 | `--skip` | Report name to skip (repeatable) |
-| `--dry` | Preview chunks without embedding or saving |
+| `--dry` | Preview chunks without embedding or saving — works **without an API key** |
 
 **What it does:**
 
@@ -123,6 +191,21 @@ pdf-pipeline chunk-embed \
 4. Embeds all chunks with OpenAI and saves one FAISS index per report.
 
 ---
+
+## Configuration
+
+All tunables live in [`src/pdf_pipeline/config.py`](src/pdf_pipeline/config.py):
+
+| Setting | Default | Used by |
+|---|---|---|
+| `GEMINI_MODEL` | `gemini-2.0-flash` | Step 1 figure transcription |
+| `EMBEDDING_MODEL` | `text-embedding-3-small` | Step 3 embeddings |
+| `MAX_CHUNK_SIZE` | `1500` | Step 3 chunking |
+| `CHUNK_OVERLAP` | `200` | Step 3 chunking |
+| `GOOGLE_API_KEY_ENV` | `GOOGLE_API_KEY` | Key fallback resolution |
+| `OPENAI_API_KEY_ENV` | `OPENAI_API_KEY` | Key fallback resolution |
+
+CLI flags override these values. Edit `config.py` to change the defaults for every command at once.
 
 ## API Key Precedence
 
@@ -140,38 +223,84 @@ For both `--openai-api-key` and `--google-api-key`:
 
 ```
 pdf_pipeline/
-├── pyproject.toml                 # Package metadata & dependencies
-├── README.md
-├── requirements.txt               # Flat dependency list (convenience)
+├── LICENSE                        # MIT license
+├── CONTRIBUTING.md                # How to contribute
+├── SECURITY.md                    # Vulnerability reporting policy
+├── pyproject.toml                 # Package metadata & pinned dependencies
+├── requirements.txt               # One-liner: editable install incl. [dev] extra
 ├── .env.example                   # API key template
 ├── src/
 │   └── pdf_pipeline/
 │       ├── __init__.py            # Version
-│       ├── cli.py                 # Click CLI (convert, extract-toc, chunk-embed)
+│       ├── config.py              # All tunables (models, chunk sizes, env-var names)
+│       ├── cli.py                 # Click CLI (convert, extract-toc, chunk-embed, smoke-test)
 │       ├── convert.py             # Step 1 — PDF → Markdown
 │       ├── extract_toc.py         # Step 2 — TOC extraction
-│       └── chunk_embed.py         # Step 3 — Chunk & embed
-├── tests/
-│   └── test_extract_toc.py        # Unit tests
-└── original/                      # Archived original scripts for reference
+│       ├── chunk_embed.py         # Step 3 — Chunk & embed
+│       └── samples/               # Bundled smoke-test data (sample PDF + markdown fixture)
+└── tests/                         # Pytest suite
+    ├── test_extract_toc.py
+    ├── test_config.py
+    └── test_cli.py
 ```
+
+---
+
+## Troubleshooting
+
+- **marker-pdf runs out of memory or is very slow** — marker loads OCR models; on low-RAM machines close other GPU/memory-heavy jobs and process one batch of PDFs at a time. Use `--marker-only` to separate conversion from Gemini enhancement.
+- **`pdf2image` complains that poppler is missing** (`Unable to get page count...`) — install it: `brew install poppler` (macOS) or `apt install poppler-utils` (Debian/Ubuntu).
+- **Gemini/OpenAI quota or `429` errors** — you are hitting API rate limits or a billing cap. Wait and retry, or process fewer pages/reports per run. `--dry` previews chunking without calling any API.
+- **`marker: command not found`** — the `marker` CLI ships with the `marker-pdf` dependency; re-run `pip install -e .` with your virtual environment active.
+- **`No markdown file found for <report>`** — Step 2 expects marker-style layout: `<markdown-dir>/<report>/<report>.md` (or `<report>_updated.md`).
+- **`OMP: Error #15` / duplicate OpenMP library warnings on macOS** — already suppressed internally (`KMP_DUPLICATE_LIB_OK`); no action needed.
 
 ---
 
 ## Development
 
 ```bash
-# Install in editable mode
-pip install -e .
+# Install in editable mode with dev tools (pytest)
+pip install -e ".[dev]"
 
 # Run tests
-pip install pytest
 pytest tests/ -v
+
+# Keyless end-to-end check on the bundled sample
+pdf-pipeline smoke-test
 
 # Verify CLI
 pdf-pipeline --help
 ```
 
+## Contributing
+
+Issues and PRs are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, coding standards, where to make changes, and the PR checklist.
+
+## Security
+
+Found a vulnerability? Please report it privately — see [SECURITY.md](SECURITY.md). Do not open public issues for security problems.
+
+---
+
 ## License
 
-MIT
+MIT License — see the [LICENSE](LICENSE) file for details.
+Copyright (c) 2026 **Arboretica**.
+
+---
+
+## Authors
+
+- Developed by **Mariam Abuelfotouh**, 2026
+- Copyright ownership: **Arboretica**
+
+---
+
+## Acknowledgements
+
+- [marker-pdf](https://github.com/VikParuchuri/marker) for PDF-to-markdown conversion
+- [Google Gemini](https://ai.google.dev/) for figure-page transcription
+- [OpenAI](https://openai.com/) for text embeddings
+- [FAISS](https://github.com/facebookresearch/faiss) for efficient vector search
+- [LangChain](https://github.com/langchain-ai/langchain) for chunking and vector-store tooling
