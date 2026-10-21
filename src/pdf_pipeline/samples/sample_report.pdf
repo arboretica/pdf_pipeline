@@ -1,0 +1,94 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+6 0 obj
+<< /Length 1165 >>
+stream
+BT
+/F2 18 Tf
+1 0 0 1 72 740 Tm
+(Sample Sustainability Report 2026) Tj
+/F1 11 Tf
+1 0 0 1 72 711 Tm
+() Tj
+/F2 14 Tf
+1 0 0 1 72 689 Tm
+(Introduction) Tj
+/F1 11 Tf
+1 0 0 1 72 664 Tm
+(This is a tiny sample report used by the pdf_pipeline smoke test.) Tj
+/F1 11 Tf
+1 0 0 1 72 642 Tm
+(It contains headings, a list, and a table so that every pipeline) Tj
+/F1 11 Tf
+1 0 0 1 72 620 Tm
+(step has something to work with.) Tj
+/F1 11 Tf
+1 0 0 1 72 598 Tm
+() Tj
+/F2 14 Tf
+1 0 0 1 72 576 Tm
+(Environmental Performance) Tj
+/F1 11 Tf
+1 0 0 1 72 551 Tm
+(- Emissions intensity reduced by 12% year over year.) Tj
+/F1 11 Tf
+1 0 0 1 72 529 Tm
+(- 45% of electricity sourced from renewables.) Tj
+/F1 11 Tf
+1 0 0 1 72 507 Tm
+() Tj
+/F2 14 Tf
+1 0 0 1 72 485 Tm
+(Social Impact) Tj
+/F1 11 Tf
+1 0 0 1 72 460 Tm
+(The company invested 2.1 million USD in community programs) Tj
+/F1 11 Tf
+1 0 0 1 72 438 Tm
+(across four regions.) Tj
+/F1 11 Tf
+1 0 0 1 72 416 Tm
+() Tj
+/F2 14 Tf
+1 0 0 1 72 394 Tm
+(Governance Data) Tj
+/F1 11 Tf
+1 0 0 1 72 369 Tm
+(Metric        2024    2025) Tj
+/F1 11 Tf
+1 0 0 1 72 347 Tm
+(Renewables    38%      45%) Tj
+/F1 11 Tf
+1 0 0 1 72 325 Tm
+(Water use     12.4m    11.1m) Tj
+ET
+endstream
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000000321 00000 n 
+0000000396 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1613
+%%EOF

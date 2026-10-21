@@ -5,20 +5,40 @@ Usage:
     pdf-pipeline convert   ...
     pdf-pipeline extract-toc ...
     pdf-pipeline chunk-embed ...
+    pdf-pipeline smoke-test ...
 """
 
+import logging
 import os
+import shutil
+from pathlib import Path
 
 import click
 from dotenv import load_dotenv
 
+from pdf_pipeline import config
+
 load_dotenv()
+
+logger = logging.getLogger("pdf_pipeline")
+
+_VERBOSITY_LEVELS = [logging.WARNING, logging.INFO, logging.DEBUG]
 
 
 @click.group()
 @click.version_option(package_name="pdf_pipeline")
-def main():
+@click.option(
+    "-v", "--verbose", count=True,
+    help="Increase verbosity: -v for INFO logs, -vv for DEBUG logs.",
+)
+def main(verbose):
     """pdf_pipeline — Convert PDFs to markdown, extract TOCs, chunk & embed."""
+    level = _VERBOSITY_LEVELS[min(verbose, len(_VERBOSITY_LEVELS) - 1)]
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+    )
+    logger.debug("Verbosity set to %s (verbose=%d)", logging.getLevelName(level), verbose)
 
 
 # -----------------------------------------------------------------------
@@ -36,10 +56,10 @@ def main():
 )
 @click.option(
     "--google-api-key", default=None,
-    help="Google API key for Gemini. Falls back to GOOGLE_API_KEY env var.",
+    help=f"Google API key for Gemini. Falls back to {config.GOOGLE_API_KEY_ENV} env var.",
 )
 @click.option(
-    "--gemini-model", default="gemini-2.0-flash", show_default=True,
+    "--gemini-model", default=config.GEMINI_MODEL, show_default=True,
     help="Gemini model to use for figure transcription.",
 )
 @click.option(
@@ -59,10 +79,11 @@ def convert(pdf_dir, output_dir, google_api_key, gemini_model, marker_only, enha
         convert_pdfs_with_marker(pdf_dir, output_dir)
 
     if not marker_only:
-        api_key = google_api_key or os.environ.get("GOOGLE_API_KEY")
+        api_key = google_api_key or os.environ.get(config.GOOGLE_API_KEY_ENV)
         if not api_key:
             raise click.ClickException(
-                "Google API key required. Provide --google-api-key or set GOOGLE_API_KEY env var."
+                f"Google API key required. Provide --google-api-key or set "
+                f"{config.GOOGLE_API_KEY_ENV} env var."
             )
         click.echo("\n=== Enhancing figures with Gemini ===")
         enhance_figures_with_gemini(
@@ -126,18 +147,19 @@ def extract_toc(markdown_dir, output_json, output_md):
 )
 @click.option(
     "--openai-api-key", default=None,
-    help="OpenAI API key. Falls back to OPENAI_API_KEY env var.",
+    help=f"OpenAI API key. Falls back to {config.OPENAI_API_KEY_ENV} env var. "
+         f"Not required for --dry runs.",
 )
 @click.option(
-    "--embedding-model", default="text-embedding-3-small", show_default=True,
+    "--embedding-model", default=config.EMBEDDING_MODEL, show_default=True,
     help="OpenAI embedding model name.",
 )
 @click.option(
-    "--max-chunk-size", default=1500, show_default=True, type=int,
+    "--max-chunk-size", default=config.MAX_CHUNK_SIZE, show_default=True, type=int,
     help="Maximum chunk size in characters.",
 )
 @click.option(
-    "--chunk-overlap", default=200, show_default=True, type=int,
+    "--chunk-overlap", default=config.CHUNK_OVERLAP, show_default=True, type=int,
     help="Overlap between chunks in characters.",
 )
 @click.option(
@@ -146,7 +168,7 @@ def extract_toc(markdown_dir, output_json, output_md):
 )
 @click.option(
     "--dry", is_flag=True, default=False,
-    help="Preview chunks without embedding or saving.",
+    help="Preview chunks without embedding or saving (no API key needed).",
 )
 def chunk_embed(
     markdown_dir, toc_json, output_dir, openai_api_key,
@@ -155,14 +177,29 @@ def chunk_embed(
     """Step 3: Chunk markdown reports and embed into FAISS vector stores."""
     from pdf_pipeline.chunk_embed import run_chunk_embed
 
-    api_key = openai_api_key or os.environ.get("OPENAI_API_KEY")
+    if dry:
+        # Keyless preview: chunks are built and printed, nothing is embedded.
+        click.echo("DRY RUN — no embedding or FAISS save (no API key needed)\n")
+        run_chunk_embed(
+            markdown_dir=markdown_dir,
+            toc_json_path=toc_json,
+            output_dir=output_dir,
+            openai_api_key=None,
+            embedding_model=embedding_model,
+            max_chunk_size=max_chunk_size,
+            chunk_overlap=chunk_overlap,
+            skip_reports=list(skip),
+            dry_run=True,
+        )
+        return
+
+    api_key = openai_api_key or os.environ.get(config.OPENAI_API_KEY_ENV)
     if not api_key:
         raise click.ClickException(
-            "OpenAI API key required. Provide --openai-api-key or set OPENAI_API_KEY env var."
+            f"OpenAI API key required. Provide --openai-api-key or set "
+            f"{config.OPENAI_API_KEY_ENV} env var. (Hint: use --dry to preview "
+            f"chunks without a key.)"
         )
-
-    if dry:
-        click.echo("DRY RUN — no embedding or FAISS save\n")
 
     run_chunk_embed(
         markdown_dir=markdown_dir,
@@ -175,3 +212,69 @@ def chunk_embed(
         skip_reports=list(skip),
         dry_run=dry,
     )
+
+
+# -----------------------------------------------------------------------
+# smoke-test
+# -----------------------------------------------------------------------
+
+@main.command("smoke-test")
+@click.option(
+    "--workdir", default="./smoke_test_output", show_default=True,
+    type=click.Path(file_okay=False),
+    help="Working directory for smoke-test outputs.",
+)
+@click.option(
+    "--with-convert", is_flag=True, default=False,
+    help="Also run Step 1 (marker-pdf) on the bundled sample. Requires the "
+         "`marker` CLI; OCR models are downloaded on first use.",
+)
+def smoke_test(workdir, with_convert):
+    """Run the pipeline on bundled sample data — keyless (no API keys needed)."""
+    from pdf_pipeline.chunk_embed import run_chunk_embed
+    from pdf_pipeline.extract_toc import process_all_reports, save_json_toc
+
+    samples_dir = Path(__file__).parent / "samples"
+    md_source = samples_dir / "markdown_output"
+    pdf_source = samples_dir / "sample_report.pdf"
+    if not md_source.exists():
+        raise click.ClickException(f"Bundled sample not found: {md_source}")
+
+    workdir = Path(workdir)
+    workdir.mkdir(parents=True, exist_ok=True)
+    md_dir = workdir / "markdown_output"
+    if md_dir.exists():
+        shutil.rmtree(md_dir)
+    shutil.copytree(md_source, md_dir)
+    click.echo(f"Sample markdown copied to: {md_dir}")
+
+    if with_convert:
+        if not pdf_source.exists():
+            raise click.ClickException(f"Bundled sample PDF not found: {pdf_source}")
+        from pdf_pipeline.convert import convert_pdfs_with_marker
+
+        pdfs_dir = workdir / "pdfs"
+        pdfs_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(pdf_source, pdfs_dir / pdf_source.name)
+        click.echo("\n=== Smoke test: Step 1 — convert (marker-pdf) ===")
+        convert_pdfs_with_marker(str(pdfs_dir), str(md_dir))
+
+    toc_json = workdir / "toc.json"
+    click.echo("\n=== Smoke test: Step 2 — extract TOC ===")
+    results = process_all_reports(str(md_dir))
+    if not results:
+        raise click.ClickException("Smoke test failed: no reports found in sample markdown.")
+    save_json_toc(results, str(toc_json))
+
+    click.echo("\n=== Smoke test: Step 3 — chunk & embed (dry run, keyless) ===")
+    run_chunk_embed(
+        markdown_dir=str(md_dir),
+        toc_json_path=str(toc_json),
+        output_dir=str(workdir / "faiss_stores"),
+        openai_api_key=None,
+        dry_run=True,
+    )
+
+    click.echo("\nSMOKE TEST PASSED")
+    click.echo(f"  Working dir : {workdir}")
+    click.echo(f"  TOC JSON    : {toc_json}")
