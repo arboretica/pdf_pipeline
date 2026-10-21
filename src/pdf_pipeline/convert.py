@@ -5,15 +5,19 @@ Uses marker-pdf for base conversion, then enhances figure-heavy pages
 with Google Gemini vision transcription.
 """
 
+import logging
 import os
 import re
-from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Optional, Set
 
 import pypdfium2 as pdfium
 from google import genai
 from google.genai import types
+
+from pdf_pipeline import config
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -28,7 +32,7 @@ def _get_gemini_client(google_api_key: str) -> genai.Client:
 def pdf_page_to_markdown_gemini(
     client: genai.Client,
     pdf_path: Path,
-    model: str = "gemini-2.0-flash",
+    model: str = config.GEMINI_MODEL,
 ) -> str:
     """
     Convert a single-page PDF file to markdown using Google Gemini.
@@ -141,7 +145,7 @@ def process_directory(
     markdown_dir: Path,
     pdf_dirs: list[Path],
     gemini_client: genai.Client,
-    gemini_model: str = "gemini-2.0-flash",
+    gemini_model: str = config.GEMINI_MODEL,
 ) -> bool:
     """
     Enhance a single marker-pdf output directory with Gemini transcriptions
@@ -152,6 +156,7 @@ def process_directory(
     dir_name = markdown_dir.name
     print(f"\n{'=' * 60}")
     print(f"Processing: {dir_name}")
+    logger.debug("process_directory(%s, gemini_model=%s)", dir_name, gemini_model)
 
     # Find pages with figures
     figure_pages = get_figure_pages(markdown_dir)
@@ -182,6 +187,10 @@ def process_directory(
                 gemini_client, single_pdf_path, model=gemini_model,
             )
             print(f"      Got {len(page_markdown[page_num])} chars")
+            logger.debug(
+                "Gemini transcription for page %d (first 500 chars):\n%s",
+                page_num, page_markdown[page_num][:500],
+            )
         except Exception as e:
             print(f"      ERROR: {e}")
             continue
