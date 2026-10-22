@@ -43,6 +43,7 @@ classifiers = [
 dependencies = [
     # Step 1 — PDF to Markdown conversion
     "marker-pdf>=1.6.1,<2.0",
+    "transformers>=4.45.2,<4.52",
     "pypdfium2>=4.30,<5.0",
     "Pillow>=10.4,<11.0",
     "google-genai>=1.73.1,<2.0",
