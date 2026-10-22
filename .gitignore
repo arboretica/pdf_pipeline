@@ -30,6 +30,7 @@ env/
 # Pipeline outputs
 faiss_stores/
 markdown_output/
+markdown_test_output/
 smoke_test_output/
 *.faiss
 
