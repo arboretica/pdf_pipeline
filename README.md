@@ -19,6 +19,35 @@
 
 ---
 
+## Why it matters: a real-world example
+
+Standard PDF-to-text extraction drops data that lives in charts and infographics. `pdf_pipeline` transcribes figure pages with Gemini vision and keeps tables intact during chunking, so that data becomes retrievable.
+
+**Source:** [Baxter 2024 Corporate Responsibility Report](https://p1.aprimocdn.net/hillrom/6fb27434-6774-4ee1-854a-b3af014c7c54/2024_Baxter_Corporate_Responsibility_Report_Original%20file.pdf) (PDF)
+**Question:** *"What is Baxter International's on-site renewable and alternative energy generation capacity?"*
+
+| | Answer |
+|---|---|
+| **ChatNetZero 3.0** (`pdf_pipeline` ingestion) | Total installed power **73,800 kW** — biomass 43,000, cogeneration 16,400, solar 11,300, heat pump 3,100 kW, with a citation to the report |
+| **Current ChatNetZero** (previous ingestion) | "Baxter International has not disclosed its on-site renewable and alternative energy generation capacity." |
+
+The figure holding these numbers was an infographic, not body text — it only became retrievable because the figure page was transcribed and chunked as a table.
+
+<table align="center">
+  <tr>
+    <th>Source figure in the Baxter report</th>
+    <th>Retrieval result</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/examples/baxter-2024/source-figure.png" alt="Baxter 2024 report: on-site renewable and alternative energy-generation capacity donut chart, 73,800 kW total" width="320"></td>
+    <td valign="top"><img src="docs/examples/baxter-2024/comparison.png" alt="ChatNetZero 3.0 vs Current ChatNetZero on the Baxter capacity question" width="620"></td>
+  </tr>
+</table>
+
+<sub>Live comparison: <a href="https://new.chatnetzero.ai/demo/">new.chatnetzero.ai/demo</a>. Energy and runtime figures in the screenshot are from the ChatNetZero demo, not this package.</sub>
+
+---
+
 ## What is pdf_pipeline?
 
 A three-step Python pipeline that converts PDF reports into searchable vector stores.
@@ -41,6 +70,7 @@ A three-step Python pipeline that converts PDF reports into searchable vector st
 - **Keyless previews** — `chunk-embed --dry` shows exactly what would be embedded, no API key required
 - **Bundled smoke test** — `pdf-pipeline smoke-test` runs the pipeline on sample data without any keys
 - **Sensible key handling** — CLI flags → environment variables → `.env` file, with nothing logged
+- **Proven on real reports** — see [Why it matters](#why-it-matters-a-real-world-example)
 
 ---
 
@@ -229,6 +259,8 @@ pdf_pipeline/
 ├── pyproject.toml                 # Package metadata & pinned dependencies
 ├── requirements.txt               # One-liner: editable install incl. [dev] extra
 ├── .env.example                   # API key template
+├── docs/
+│   └── examples/baxter-2024/      # Real-world retrieval comparison shown in the README
 ├── src/
 │   └── pdf_pipeline/
 │       ├── __init__.py            # Version
