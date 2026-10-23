@@ -30,12 +30,21 @@ env/
 # Pipeline outputs
 faiss_stores/
 markdown_output/
+markdown_test_output/
+smoke_test_output/
 *.faiss
 
-# PDF files (keep repo lightweight)
-*.pdf
+# Local test data
+Codebase/
 
-# Original scripts at root (archived copies live in original/)
+# PDF files (keep repo lightweight — the bundled sample is exempt)
+*.pdf
+!src/pdf_pipeline/samples/*.pdf
+
+# Re-include the bundled sample markdown (marker-style layout)
+!src/pdf_pipeline/samples/markdown_output/
+
+# Original one-off scripts at repo root (local archives, not part of the package)
 chunk_embed_hlr*
 extract_toc_hlr*
 pdf_to_markdown*

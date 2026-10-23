@@ -8,6 +8,7 @@ persists one FAISS vector store per report.
 """
 
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -17,6 +18,10 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from pdf_pipeline import config
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -267,8 +272,8 @@ def chunk_section_parts(
     parts: list[dict],
     report_name: str,
     source_file: str,
-    max_chunk_size: int = 1500,
-    chunk_overlap: int = 200,
+    max_chunk_size: int = config.MAX_CHUNK_SIZE,
+    chunk_overlap: int = config.CHUNK_OVERLAP,
 ) -> list[Document]:
     """
     Take the separated parts (text/table/figure) for a section and
@@ -338,8 +343,8 @@ def build_chunks_for_report(
     report_info: dict,
     headings_enriched: list[dict],
     markdown_dir: str | Path,
-    max_chunk_size: int = 1500,
-    chunk_overlap: int = 200,
+    max_chunk_size: int = config.MAX_CHUNK_SIZE,
+    chunk_overlap: int = config.CHUNK_OVERLAP,
 ) -> list[Document]:
     """Build all Document chunks for a single report."""
     source_file = report_info["source_file"]
@@ -428,22 +433,35 @@ def run_chunk_embed(
     markdown_dir: str,
     toc_json_path: str,
     output_dir: str,
-    openai_api_key: str,
-    embedding_model: str = "text-embedding-3-small",
-    max_chunk_size: int = 1500,
-    chunk_overlap: int = 200,
+    openai_api_key: str | None,
+    embedding_model: str = config.EMBEDDING_MODEL,
+    max_chunk_size: int = config.MAX_CHUNK_SIZE,
+    chunk_overlap: int = config.CHUNK_OVERLAP,
     skip_reports: list[str] | None = None,
     dry_run: bool = False,
 ) -> None:
     """
     Full pipeline: load TOC, chunk every report, embed, and save FAISS stores.
+
+    With ``dry_run=True`` no embeddings are created and nothing is saved —
+    an OpenAI API key is not required.
     """
     os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-    os.environ["OPENAI_API_KEY"] = openai_api_key
 
-    embeddings = OpenAIEmbeddings(model=embedding_model)
+    embeddings: OpenAIEmbeddings | None = None
+    if not dry_run:
+        if not openai_api_key:
+            raise ValueError(
+                "OpenAI API key required for embedding. Pass --openai-api-key or "
+                "set OPENAI_API_KEY. (Use --dry to preview chunks without a key.)"
+            )
+        os.environ["OPENAI_API_KEY"] = openai_api_key
+        embeddings = OpenAIEmbeddings(model=embedding_model)
+        logger.debug("Initialised OpenAIEmbeddings(model=%s)", embedding_model)
+
     faiss_store_dir = Path(output_dir)
-    faiss_store_dir.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        faiss_store_dir.mkdir(parents=True, exist_ok=True)
 
     toc_data = load_toc_json(toc_json_path)
     skip_set = set(skip_reports or [])
@@ -472,6 +490,10 @@ def run_chunk_embed(
             max_chunk_size=max_chunk_size,
             chunk_overlap=chunk_overlap,
         )
+        logger.debug(
+            "Built %d chunks for %s (max_chunk_size=%d, chunk_overlap=%d)",
+            len(documents), report_name, max_chunk_size, chunk_overlap,
+        )
 
         n_text = sum(1 for d in documents if d.metadata["chunk_type"] == "text")
         n_table = sum(1 for d in documents if d.metadata["chunk_type"] == "table")
@@ -487,6 +509,7 @@ def run_chunk_embed(
             print(f"  Metadata: {json.dumps(sample.metadata, indent=4, default=str)}")
             preview = sample.page_content[:300]
             print(f"  Content:  {preview}...")
+            logger.debug("Sample chunk full content:\n%s", sample.page_content)
 
         if not dry_run:
             embed_and_save(report_name, documents, faiss_store_dir, embeddings)

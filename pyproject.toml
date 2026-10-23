@@ -1,35 +1,91 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pdf_pipeline"
-version = "0.1.0"
+name = "pdf-pipeline"
+dynamic = ["version"]
 description = "A pipeline for converting PDFs to markdown, extracting TOCs, and building FAISS vector stores."
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Mariam Abuelfotouh" },
+]
+keywords = [
+    "pdf",
+    "markdown",
+    "rag",
+    "faiss",
+    "vector-search",
+    "embeddings",
+    "gemini",
+    "openai",
+    "toc",
+    "llm",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Indexing",
+    "Topic :: Text Processing :: Markup :: Markdown",
+]
 dependencies = [
     # Step 1 — PDF to Markdown conversion
-    "marker-pdf",
-    "pypdfium2",
-    "Pillow",
-    "google-generativeai",
-    "google-genai",
-    "pdf2image",
-    "python-dotenv",
+    "marker-pdf>=1.6.1,<2.0",
+    "transformers>=4.45.2,<4.52",
+    "pypdfium2>=4.30,<5.0",
+    "Pillow>=10.4,<11.0",
+    "google-genai>=1.73.1,<2.0",
+    "python-dotenv>=1.2.2,<2.0",
     # Step 3 — Chunk & Embed
-    "langchain-community",
-    "langchain-core",
-    "langchain-openai",
-    "langchain-text-splitters",
-    "faiss-cpu",
+    "langchain-community>=0.4.1,<0.5",
+    "langchain-core>=1.3.0,<2.0",
+    "langchain-openai>=1.1.14,<2.0",
+    "langchain-text-splitters>=1.1.2,<2.0",
+    "faiss-cpu>=1.13.2,<2.0",
     # CLI
-    "click",
+    "click>=8.3.2,<9.0",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9.0",
+    "build>=1.2",
+    "twine>=6.1",  # twine>=6.1 is required for PEP 639 License-Expression metadata
+]
+
+[project.urls]
+Homepage = "https://github.com/arboretica/pdf_pipeline"
+Repository = "https://github.com/arboretica/pdf_pipeline"
+Changelog = "https://github.com/arboretica/pdf_pipeline/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/arboretica/pdf_pipeline/issues"
 
 [project.scripts]
 pdf-pipeline = "pdf_pipeline.cli:main"
 
+[tool.setuptools.dynamic]
+version = { attr = "pdf_pipeline.__version__" }
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+pdf_pipeline = [
+    "samples/sample_report.pdf",
+    "samples/markdown_output/sample_report/sample_report.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
