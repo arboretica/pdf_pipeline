@@ -26,7 +26,7 @@ _VERBOSITY_LEVELS = [logging.WARNING, logging.INFO, logging.DEBUG]
 
 
 @click.group()
-@click.version_option(package_name="pdf_pipeline")
+@click.version_option(package_name="pdf-pipeline")
 @click.option(
     "-v", "--verbose", count=True,
     help="Increase verbosity: -v for INFO logs, -vv for DEBUG logs.",

@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=77.0", "wheel"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pdf_pipeline"
-version = "0.1.0"
+name = "pdf-pipeline"
+dynamic = ["version"]
 description = "A pipeline for converting PDFs to markdown, extracting TOCs, and building FAISS vector stores."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,6 +32,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -47,7 +48,6 @@ dependencies = [
     "pypdfium2>=4.30,<5.0",
     "Pillow>=10.4,<11.0",
     "google-genai>=1.73.1,<2.0",
-    "pdf2image>=1.17.0,<2.0",
     "python-dotenv>=1.2.2,<2.0",
     # Step 3 — Chunk & Embed
     "langchain-community>=0.4.1,<0.5",
@@ -60,14 +60,23 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0,<9.0"]
+dev = [
+    "pytest>=8.0,<9.0",
+    "build>=1.2",
+    "twine>=6.1",  # twine>=6.1 is required for PEP 639 License-Expression metadata
+]
 
 [project.urls]
 Homepage = "https://github.com/arboretica/pdf_pipeline"
+Repository = "https://github.com/arboretica/pdf_pipeline"
+Changelog = "https://github.com/arboretica/pdf_pipeline/blob/main/CHANGELOG.md"
 "Bug Tracker" = "https://github.com/arboretica/pdf_pipeline/issues"
 
 [project.scripts]
 pdf-pipeline = "pdf_pipeline.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "pdf_pipeline.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -77,3 +86,6 @@ pdf_pipeline = [
     "samples/sample_report.pdf",
     "samples/markdown_output/sample_report/sample_report.md",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

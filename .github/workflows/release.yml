@@ -1,0 +1,81 @@
+name: Release
+
+# Tag-driven release: push a tag like v0.1.0 to publish.
+# Uses PyPI Trusted Publishing (OIDC) — no API tokens in the repo.
+# The exact sdist/wheel built and tested by the `checks` job is what gets
+# uploaded; nothing is rebuilt between jobs.
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  checks:
+    name: Test & build
+    uses: ./.github/workflows/ci.yml
+
+  verify-version:
+    name: Verify tag matches package version
+    needs: [checks]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Compare tag with wheel metadata
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(unzip -p dist/*.whl '*/METADATA' | grep '^Version:' | head -1 | cut -d' ' -f2)"
+          echo "Tag: v${TAG_VERSION} | Wheel: ${PKG_VERSION}"
+          test "${TAG_VERSION}" = "${PKG_VERSION}"
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: [checks, verify-version]
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [checks, verify-version, publish-testpypi]
+    runs-on: ubuntu-latest
+    # Requires reviewer approval (configured in the GitHub environment).
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "pdf-pipeline ${GITHUB_REF_NAME#v}" \
+            --generate-notes

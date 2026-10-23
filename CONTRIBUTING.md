@@ -21,6 +21,7 @@ This guide explains how to set up your environment, the coding style we use, how
 - [Security](#security)
 - [Pull request checklist](#pull-request-checklist)
 - [Release notes](#release-notes)
+- [Releasing (maintainers)](#releasing-maintainers)
 - [Authors](#authors)
 
 ---
@@ -54,7 +55,6 @@ Harassment or disrespectful conduct is not tolerated.
 ### Prerequisites
 - **Python** 3.10+
 - A virtual environment tool (`venv` or `conda`)
-- `poppler-utils` if you use the optional `pdf2image` dependency (`brew install poppler` on macOS, `apt install poppler-utils` on Debian/Ubuntu)
 - API keys:
   - **GOOGLE_API_KEY** (for Step 1 Gemini figure enhancement)
   - **OPENAI_API_KEY** (for Step 3 embeddings)
@@ -206,7 +206,34 @@ pdf-pipeline smoke-test
 
 ## Release notes
 
-- Keep a short **CHANGELOG** in your PR description if user-visible behavior changes (flags, defaults, outputs, filenames, or minimum Python version).
+- If your PR changes user-visible behavior (flags, defaults, outputs, filenames, or the minimum Python version), add an entry under **[Unreleased]** in [`CHANGELOG.md`](CHANGELOG.md).
+- Maintainers move `[Unreleased]` entries under a version heading when tagging a release.
+
+---
+
+## Releasing (maintainers)
+
+Releases are published to PyPI automatically by the [`release`](.github/workflows/release.yml) workflow using **PyPI Trusted Publishing** (OIDC) — no API tokens are stored in the repo.
+
+1. Make sure `CHANGELOG.md` has a `## [X.Y.Z] - <date>` section and `src/pdf_pipeline/__init__.py` carries the matching `__version__` (the version is single-sourced there; `pyproject.toml` reads it dynamically).
+2. Tag and push:
+
+   ```bash
+   git checkout main && git pull
+   git tag -a vX.Y.Z -m "pdf-pipeline X.Y.Z"
+   git push origin vX.Y.Z
+   ```
+
+3. The workflow runs the test matrix, builds the sdist and wheel, verifies the tag matches the package version, and publishes to **TestPyPI** first.
+4. Approve the `pypi` environment in the GitHub Actions run — this uploads the exact artifacts that were tested to PyPI and attaches them to a GitHub Release.
+5. Spot-check from a clean environment:
+
+   ```bash
+   pip install pdf-pipeline
+   pdf-pipeline --version && pdf-pipeline smoke-test
+   ```
+
+If PyPI rejects the project name as too similar to an existing one, switch `name` in `pyproject.toml` to `arboretica-pdf-pipeline`, update the README badges, the `--version` lookup in `cli.py`, and the pending Trusted Publisher entry, then delete and re-push the tag.
 
 ---
 

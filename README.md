@@ -5,6 +5,8 @@
 
 <p align="center">
   <a href="https://github.com/arboretica/pdf_pipeline/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/arboretica/pdf_pipeline?style=flat&label=Stars"></a>
+  <a href="https://pypi.org/project/pdf-pipeline/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pdf-pipeline?style=flat&label=PyPI"></a>
+  <a href="https://github.com/arboretica/pdf_pipeline/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/arboretica/pdf_pipeline/ci.yml?branch=main&label=CI"></a>
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-informational">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-blue"></a>
   <a href="https://github.com/arboretica/pdf_pipeline/issues"><img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen"></a>
@@ -93,10 +95,23 @@ flowchart LR
 
 - **Python 3.10+**
 - API keys for **Google Gemini** (Step 1) and **OpenAI** (Step 3)
-- `poppler-utils` if you use the optional `pdf2image` dependency
-  (`brew install poppler` on macOS, `apt install poppler-utils` on Debian/Ubuntu)
 
 ## Installation
+
+**From PyPI** (recommended):
+
+```bash
+pip install pdf-pipeline
+```
+
+> **Heads-up on download size:** Step 1 uses [marker-pdf](https://github.com/VikParuchuri/marker), which pulls in PyTorch, so the first install is large. On a machine without a GPU, pre-installing the CPU-only PyTorch wheel keeps the download much smaller:
+>
+> ```bash
+> pip install torch --index-url https://download.pytorch.org/whl/cpu
+> pip install pdf-pipeline
+> ```
+
+**From source** (for development):
 
 ```bash
 git clone https://github.com/arboretica/pdf_pipeline.git
@@ -111,10 +126,8 @@ All Python dependencies are declared (with pinned minimum versions) in `pyprojec
 ## Quick Start
 
 ```bash
-# 1. Clone & install
-git clone https://github.com/arboretica/pdf_pipeline.git
-cd pdf_pipeline
-pip install -e .
+# 1. Install
+pip install pdf-pipeline
 
 # 2. Supply API keys (pick one method)
 #    a) CLI flags   --google-api-key / --openai-api-key
@@ -256,9 +269,11 @@ pdf_pipeline/
 ├── LICENSE                        # MIT license
 ├── CONTRIBUTING.md                # How to contribute
 ├── SECURITY.md                    # Vulnerability reporting policy
+├── CHANGELOG.md                   # Release history (Keep a Changelog format)
 ├── pyproject.toml                 # Package metadata & pinned dependencies
 ├── requirements.txt               # One-liner: editable install incl. [dev] extra
 ├── .env.example                   # API key template
+├── .github/workflows/             # CI tests + tag-driven PyPI release workflow
 ├── docs/
 │   └── examples/baxter-2024/      # Real-world retrieval comparison shown in the README
 ├── src/
@@ -281,9 +296,8 @@ pdf_pipeline/
 ## Troubleshooting
 
 - **marker-pdf runs out of memory or is very slow** — marker loads OCR models; on low-RAM machines close other GPU/memory-heavy jobs and process one batch of PDFs at a time. Use `--marker-only` to separate conversion from Gemini enhancement.
-- **`pdf2image` complains that poppler is missing** (`Unable to get page count...`) — install it: `brew install poppler` (macOS) or `apt install poppler-utils` (Debian/Ubuntu).
 - **Gemini/OpenAI quota or `429` errors** — you are hitting API rate limits or a billing cap. Wait and retry, or process fewer pages/reports per run. `--dry` previews chunking without calling any API.
-- **`marker: command not found`** — the `marker` CLI ships with the `marker-pdf` dependency; re-run `pip install -e .` with your virtual environment active.
+- **`marker: command not found`** — the `marker` CLI ships with the `marker-pdf` dependency; re-run `pip install pdf-pipeline` (or `pip install -e .` for a source checkout) with your virtual environment active.
 - **`No markdown file found for <report>`** — Step 2 expects marker-style layout: `<markdown-dir>/<report>/<report>.md` (or `<report>_updated.md`).
 - **`OMP: Error #15` / duplicate OpenMP library warnings on macOS** — already suppressed internally (`KMP_DUPLICATE_LIB_OK`); no action needed.
 
